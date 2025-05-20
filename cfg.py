@@ -1,16 +1,36 @@
 import re
 
-# listas de todo lo que se puede aceptar
-id = ['x', 'y'] 
-num = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
-oper = ['-', '+', '/', '*']
-par = ['(', ')', '=']
-# estos los rechaza
-operadores_invalidos = ['**', '==', '!=', '<=', '>=']
-lexico = []
+# AFDs para cada tipo de token
+def es_identificador(token):
+    if not token[0].isalpha():
+        return False
+    for c in token[1:]:
+        if not c.isalnum():
+            return False
+    return True
 
+# para los números
+def es_numero(token):
+    if token[0] in '+-':
+        token = token[1:]
+    return token.isdigit()
+
+# para los operadores
+def es_operador(token):
+    return token in ['+', '-', '*', '/', '=']
+
+# parentesis
+def es_parentesis(token):
+    return token in ['(', ')']
+
+# Operadores inválidos
+operadores_invalidos = ['**', '==', '!=', '<=', '>=']
+
+# Ingresar la expresión
 entrada = input("Escribe una expresión: ")
-tokens = re.findall(r'\*\*|==|!=|<=|>=|[=()+\-*/]|\w+', entrada) #filtra de una operadores invalidos
+tokens = re.findall(r'\*\*|==|!=|<=|>=|[+\-]?\d+|\w+|[=()+\-*/]', entrada)
+
+lexico = []
 
 # hace el análisis léxico, revisa letra por letra la expresión que se ingresó
 for t in tokens:
@@ -18,16 +38,15 @@ for t in tokens:
         print("Operador inválido:", t)
         lexico = ['Vuelva a empezar']
         break
-    elif t in id: # ej. si t es 'x' o 'y' checa que pertenece a la lista de id y manda la palabra 'id'
+    elif es_identificador(t): #  ej. si t es 'x' o 'y' checa que pertenece a la lista de id y manda la palabra 'id'
         lexico.append('id')
-    elif t in num:
+    elif es_numero(t):
         lexico.append('num')
-    elif t in oper:
+    elif es_operador(t):
         lexico.append(t)
-    elif t in par:
+    elif es_parentesis(t):
         lexico.append(t)
     else:
-        # si metió algo inválido lo saca del programa
         print("Caracter inválido:", t)
         lexico = ['Vuelva a empezar']
         break
@@ -38,11 +57,7 @@ if 'Vuelva a empezar' in lexico:
     exit()
 
 # checa que si se abre un parentesis se cierre
-abre = lexico.count('(')
-cierra = lexico.count(')')
-
-# checa que si se abre un parentesis se cierre
-if abre != cierra:
+if lexico.count('(') != lexico.count(')'):
     print("Hay un desbalance de paréntesis.")
     print("Vuelva a empezar")
     exit()
@@ -58,7 +73,7 @@ for i in range(1, len(lexico)):
     anterior = lexico[i - 1]
 
     # que no haya dos operadores juntos
-    if actual in oper and anterior in oper:
+    if actual in ['+', '-', '*', '/'] and anterior in ['+', '-', '*', '/']:
         print("No se puede tener dos operadores lógicos juntos.")
         print("Vuelva a empezar")
         exit()
@@ -77,9 +92,11 @@ for i in range(1, len(lexico)):
 
     # que no empiece con +
     if actual == '+' and anterior == '=':
-        print("Un '+' debe estar después de un número o id. ")
+        print("Un '+' debe estar después de un número o id.")
         print("Vuelva a empezar")
         exit()
 
+# imprime el token y te dice que es válido
 for elemento in lexico:
     print(elemento, end=' ')
+print("\nExpresión válida")
