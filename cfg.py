@@ -1,36 +1,53 @@
-class AnalizadorLexico:
-    """Clase responsable del análisis léxico (tokenización)"""
+class UtilsCaracteres:
+    """Clase con utilidades para análisis de caracteres - Evita duplicación"""
     
-    def __init__(self):
-        self.operadores_dobles = ['**', '==', '!=', '<=', '>=']
-        self.operadores_simples = ['+', '-', '*', '/', '=']
-        self.parentesis = ['(', ')']
-    
-    def _es_letra(self, c):
+    @staticmethod
+    def es_letra(c):
         return ('a' <= c <= 'z') or ('A' <= c <= 'Z')
     
-    def _es_digito(self, c):
+    @staticmethod
+    def es_digito(c):
         return '0' <= c <= '9'
     
-    def _es_alfanumerico(self, c):
-        return self._es_letra(c) or self._es_digito(c)
+    @staticmethod
+    def es_alfanumerico(c):
+        return UtilsCaracteres.es_letra(c) or UtilsCaracteres.es_digito(c)
     
-    def _es_espacio(self, c):
+    @staticmethod
+    def es_espacio(c):
         return c in ' \t\n'
+
+
+class ConfigOperadores:
+    """Configuración centralizada de operadores y símbolos"""
+    
+    OPERADORES_DOBLES = ['**', '==', '!=', '<=', '>=']
+    OPERADORES_SIMPLES = ['+', '-', '*', '/', '=']
+    OPERADORES_ARITMETICOS = ['+', '-', '*', '/']
+    OPERADORES_VALIDOS = OPERADORES_ARITMETICOS + ['=']
+    OPERADORES_INVALIDOS = OPERADORES_DOBLES
+    PARENTESIS = ['(', ')']
+
+
+class AnalizadorLexico:
+    """Clase responsable SOLO de tokenizar (dividir en tokens)"""
+    
+    def __init__(self):
+        pass
     
     def tokenizar(self, entrada):
         tokens = []
         i = 0
         
         while i < len(entrada):
-            if self._es_espacio(entrada[i]):
+            if UtilsCaracteres.es_espacio(entrada[i]):
                 i += 1
                 continue
             
             # Verificar operadores dobles
             if i + 1 < len(entrada):
                 doble = entrada[i:i+2]
-                if doble in self.operadores_dobles:
+                if doble in ConfigOperadores.OPERADORES_DOBLES:
                     tokens.append(doble)
                     i += 2
                     continue
@@ -43,14 +60,14 @@ class AnalizadorLexico:
                 continue
             
             # Manejar números
-            if self._es_digito(entrada[i]):
+            if UtilsCaracteres.es_digito(entrada[i]):
                 numero, nueva_i = self._extraer_numero(entrada, i)
                 tokens.append(numero)
                 i = nueva_i
                 continue
             
             # Manejar identificadores
-            if self._es_letra(entrada[i]) or entrada[i] == '_':
+            if UtilsCaracteres.es_letra(entrada[i]) or entrada[i] == '_':
                 identificador, nueva_i = self._extraer_identificador(entrada, i)
                 tokens.append(identificador)
                 i = nueva_i
@@ -69,63 +86,46 @@ class AnalizadorLexico:
     def _es_numero_con_signo(self, entrada, i, tokens):
         if entrada[i] not in '+-':
             return False
-        if i + 1 >= len(entrada) or not self._es_digito(entrada[i + 1]):
+        if i + 1 >= len(entrada) or not UtilsCaracteres.es_digito(entrada[i + 1]):
             return False
         
         # Verificar contexto para determinar si es signo o operador
         if i == 0:
             return True
-        if entrada[i-1] in "=+-*/(" or (self._es_espacio(entrada[i-1]) and tokens and tokens[-1] in "=+-*/("):
+        if entrada[i-1] in "=+-*/(" or (UtilsCaracteres.es_espacio(entrada[i-1]) and tokens and tokens[-1] in "=+-*/("):
             return True
         return False
     
     def _extraer_numero_con_signo(self, entrada, i):
         signo = entrada[i]
         j = i + 1
-        while j < len(entrada) and self._es_digito(entrada[j]):
+        while j < len(entrada) and UtilsCaracteres.es_digito(entrada[j]):
             j += 1
         return signo + entrada[i + 1:j], j
     
     def _extraer_numero(self, entrada, i):
         j = i
-        while j < len(entrada) and self._es_digito(entrada[j]):
+        while j < len(entrada) and UtilsCaracteres.es_digito(entrada[j]):
             j += 1
         return entrada[i:j], j
     
     def _extraer_identificador(self, entrada, i):
         j = i
-        while j < len(entrada) and (self._es_alfanumerico(entrada[j]) or entrada[j] == '_'):
+        while j < len(entrada) and (UtilsCaracteres.es_alfanumerico(entrada[j]) or entrada[j] == '_'):
             j += 1
         return entrada[i:j], j
 
 
 class ClasificadorTokens:
-    """Clase responsable de clasificar tokens en categorías léxicas"""
-    
-    def __init__(self):
-        self.operadores_invalidos = ['**', '==', '!=', '<=', '>=']
-        self.operadores_aritmeticos = ['+', '-', '*', '/']
-        self.operadores_validos = self.operadores_aritmeticos + ['=']
-        self.parentesis = ['(', ')']
-    
-    def _es_letra(self, c):
-        return ('a' <= c <= 'z') or ('A' <= c <= 'Z')
-    
-    def _es_digito(self, c):
-        return '0' <= c <= '9'
-    
-    def _es_alfanumerico(self, c):
-        return self._es_letra(c) or self._es_digito(c)
+    """Clase responsable SOLO de clasificar tokens ya extraídos"""
     
     def es_identificador(self, token):
         if not token:
             return False
-        # Primer carácter debe ser letra
-        if not self._es_letra(token[0]):
+        if not UtilsCaracteres.es_letra(token[0]):
             return False
-        # Resto de caracteres deben ser letras o números
         for c in token[1:]:
-            if not self._es_alfanumerico(c):
+            if not UtilsCaracteres.es_alfanumerico(c):
                 return False
         return True
     
@@ -135,23 +135,22 @@ class ClasificadorTokens:
         token_sin_signo = token[1:] if token[0] in '+-' else token
         if not token_sin_signo:
             return False
-        # Todos los caracteres deben ser dígitos
         for c in token_sin_signo:
-            if not self._es_digito(c):
+            if not UtilsCaracteres.es_digito(c):
                 return False
         return True
     
     def es_operador(self, token):
-        return token in self.operadores_validos
+        return token in ConfigOperadores.OPERADORES_VALIDOS
     
     def es_parentesis(self, token):
-        return token in self.parentesis
+        return token in ConfigOperadores.PARENTESIS
     
     def clasificar_tokens(self, tokens):
         lexico = []
         
         for token in tokens:
-            if token in self.operadores_invalidos:
+            if token in ConfigOperadores.OPERADORES_INVALIDOS:
                 raise ValueError(f"Operador inválido: {token}")
             elif self.es_identificador(token):
                 lexico.append('id')
@@ -171,7 +170,6 @@ class ValidadorSintactico:
     """Clase responsable de las validaciones sintácticas"""
     
     def __init__(self):
-        self.operadores_aritmeticos = ['+', '-', '*', '/']
         self.reglas_adyacencia = {
             ('num', '('): "No puede ir un '(' después de un número.",
             (')', 'num'): "No puede ir un número después de ')'.",
@@ -198,7 +196,7 @@ class ValidadorSintactico:
             (lexico[0] != 'id' or lexico[1] != '=', "Orden incorrecto de tokens."),
             (len(lexico) > 2 and lexico[2] in ['*', '/'], 
              "La expresión no puede comenzar con un operador multiplicativo."),
-            (lexico[-1] in self.operadores_aritmeticos, 
+            (lexico[-1] in ConfigOperadores.OPERADORES_ARITMETICOS, 
              "La expresión no puede terminar con un operador.")
         ]
         
@@ -211,7 +209,7 @@ class ValidadorSintactico:
             anterior, actual = lexico[i-1], lexico[i]
             
             # Operadores aritméticos consecutivos
-            if anterior in self.operadores_aritmeticos and actual in self.operadores_aritmeticos:
+            if anterior in ConfigOperadores.OPERADORES_ARITMETICOS and actual in ConfigOperadores.OPERADORES_ARITMETICOS:
                 raise ValueError("No se puede tener dos operadores aritméticos juntos.")
             
             # Operador después de '='
@@ -219,7 +217,7 @@ class ValidadorSintactico:
                 raise ValueError(f"Un '{actual}' debe estar después de un número o id.")
             
             # Operador antes de ')'
-            if actual == ')' and anterior in self.operadores_aritmeticos:
+            if actual == ')' and anterior in ConfigOperadores.OPERADORES_ARITMETICOS:
                 raise ValueError("No puede haber un operador justo antes de un paréntesis de cierre.")
             
             # Paréntesis después de identificador (excepto después de '=')
@@ -247,7 +245,7 @@ class ValidadorExpresion:
     
     def validar_expresion(self, entrada):
         try:
-            # Análisis léxico
+            # Análisis léxico (tokenización)
             tokens = self.analizador_lexico.tokenizar(entrada)
             
             # Clasificación de tokens
