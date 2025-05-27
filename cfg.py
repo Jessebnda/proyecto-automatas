@@ -107,6 +107,8 @@ for t in tokens:
 if 'Vuelva a empezar' in lexico:
     print("Vuelva a empezar")
     exit()
+else:
+    print(lexico)
 
 def validar_parentesis(tokens):
     nivel = 0
