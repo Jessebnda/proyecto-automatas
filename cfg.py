@@ -5,12 +5,38 @@ class ValidadorExpresion:
         self.operadores_validos = self.operadores_aritmeticos + ['=']
         self.parentesis = ['(', ')']
     
+    def _es_letra(self, c):
+        return ('a' <= c <= 'z') or ('A' <= c <= 'Z')
+    
+    def _es_digito(self, c):
+        return '0' <= c <= '9'
+    
+    def _es_alfanumerico(self, c):
+        return self._es_letra(c) or self._es_digito(c)
+    
     def es_identificador(self, token):
-        return token[0].isalpha() and all(c.isalnum() for c in token[1:])
+        if not token:
+            return False
+        # Primer carácter debe ser letra
+        if not self._es_letra(token[0]):
+            return False
+        # Resto de caracteres deben ser letras o números
+        for c in token[1:]:
+            if not self._es_alfanumerico(c):
+                return False
+        return True
     
     def es_numero(self, token):
+        if not token:
+            return False
         token_sin_signo = token[1:] if token[0] in '+-' else token
-        return token_sin_signo.isdigit()
+        if not token_sin_signo:
+            return False
+        # Todos los caracteres deben ser dígitos
+        for c in token_sin_signo:
+            if not self._es_digito(c):
+                return False
+        return True
     
     def es_operador(self, token):
         return token in self.operadores_validos
@@ -28,7 +54,7 @@ class ValidadorExpresion:
         }
         
         while i < len(entrada):
-            if entrada[i].isspace():
+            if entrada[i] == ' ' or entrada[i] == '\t' or entrada[i] == '\n':
                 i += 1
                 continue
             
@@ -48,14 +74,14 @@ class ValidadorExpresion:
                 continue
             
             # Manejar números
-            if entrada[i].isdigit():
+            if self._es_digito(entrada[i]):
                 numero, nueva_i = self._extraer_numero(entrada, i)
                 tokens.append(numero)
                 i = nueva_i
                 continue
             
             # Manejar identificadores
-            if entrada[i].isalpha() or entrada[i] == '_':
+            if self._es_letra(entrada[i]) or entrada[i] == '_':
                 identificador, nueva_i = self._extraer_identificador(entrada, i)
                 tokens.append(identificador)
                 i = nueva_i
@@ -74,32 +100,32 @@ class ValidadorExpresion:
     def _es_numero_con_signo(self, entrada, i, tokens):
         if entrada[i] not in '+-':
             return False
-        if i + 1 >= len(entrada) or not entrada[i + 1].isdigit():
+        if i + 1 >= len(entrada) or not self._es_digito(entrada[i + 1]):
             return False
         
         # Verificar contexto para determinar si es signo o operador
         if i == 0:
             return True
-        if entrada[i-1] in "=+-*/(" or (entrada[i-1].isspace() and tokens and tokens[-1] in "=+-*/("):
+        if entrada[i-1] in "=+-*/(" or (entrada[i-1] in ' \t\n' and tokens and tokens[-1] in "=+-*/("):
             return True
         return False
     
     def _extraer_numero_con_signo(self, entrada, i):
         signo = entrada[i]
         j = i + 1
-        while j < len(entrada) and entrada[j].isdigit():
+        while j < len(entrada) and self._es_digito(entrada[j]):
             j += 1
         return signo + entrada[i + 1:j], j
     
     def _extraer_numero(self, entrada, i):
         j = i
-        while j < len(entrada) and entrada[j].isdigit():
+        while j < len(entrada) and self._es_digito(entrada[j]):
             j += 1
         return entrada[i:j], j
     
     def _extraer_identificador(self, entrada, i):
         j = i
-        while j < len(entrada) and (entrada[j].isalnum() or entrada[j] == '_'):
+        while j < len(entrada) and (self._es_alfanumerico(entrada[j]) or entrada[j] == '_'):
             j += 1
         return entrada[i:j], j
     
@@ -185,7 +211,7 @@ class ValidadorExpresion:
     
     def validar_doble_negativo(self, tokens):
         for i in range(len(tokens) - 1):
-            if tokens[i] == '-' and tokens[i + 1].startswith('-'):
+            if tokens[i] == '-' and len(tokens[i + 1]) > 0 and tokens[i + 1][0] == '-':
                 raise ValueError("No se permite doble signo negativo.")
     
     def validar_expresion(self, entrada):
