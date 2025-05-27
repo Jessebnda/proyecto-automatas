@@ -115,6 +115,7 @@ class Lexico:
             exit()
         else:
             print(lexico)
+        return lexico
 
 
 
