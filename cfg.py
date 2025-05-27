@@ -1,4 +1,107 @@
-class ValidadorExpresion:
+class AnalizadorLexico:
+    """Clase responsable del análisis léxico (tokenización)"""
+    
+    def __init__(self):
+        self.operadores_dobles = ['**', '==', '!=', '<=', '>=']
+        self.operadores_simples = ['+', '-', '*', '/', '=']
+        self.parentesis = ['(', ')']
+    
+    def _es_letra(self, c):
+        return ('a' <= c <= 'z') or ('A' <= c <= 'Z')
+    
+    def _es_digito(self, c):
+        return '0' <= c <= '9'
+    
+    def _es_alfanumerico(self, c):
+        return self._es_letra(c) or self._es_digito(c)
+    
+    def _es_espacio(self, c):
+        return c in ' \t\n'
+    
+    def tokenizar(self, entrada):
+        tokens = []
+        i = 0
+        
+        while i < len(entrada):
+            if self._es_espacio(entrada[i]):
+                i += 1
+                continue
+            
+            # Verificar operadores dobles
+            if i + 1 < len(entrada):
+                doble = entrada[i:i+2]
+                if doble in self.operadores_dobles:
+                    tokens.append(doble)
+                    i += 2
+                    continue
+            
+            # Manejar números con signo
+            if self._es_numero_con_signo(entrada, i, tokens):
+                numero, nueva_i = self._extraer_numero_con_signo(entrada, i)
+                tokens.append(numero)
+                i = nueva_i
+                continue
+            
+            # Manejar números
+            if self._es_digito(entrada[i]):
+                numero, nueva_i = self._extraer_numero(entrada, i)
+                tokens.append(numero)
+                i = nueva_i
+                continue
+            
+            # Manejar identificadores
+            if self._es_letra(entrada[i]) or entrada[i] == '_':
+                identificador, nueva_i = self._extraer_identificador(entrada, i)
+                tokens.append(identificador)
+                i = nueva_i
+                continue
+            
+            # Operadores y paréntesis simples
+            if entrada[i] in "=()+-*/":
+                tokens.append(entrada[i])
+            else:
+                tokens.append(entrada[i])
+            
+            i += 1
+        
+        return tokens
+    
+    def _es_numero_con_signo(self, entrada, i, tokens):
+        if entrada[i] not in '+-':
+            return False
+        if i + 1 >= len(entrada) or not self._es_digito(entrada[i + 1]):
+            return False
+        
+        # Verificar contexto para determinar si es signo o operador
+        if i == 0:
+            return True
+        if entrada[i-1] in "=+-*/(" or (self._es_espacio(entrada[i-1]) and tokens and tokens[-1] in "=+-*/("):
+            return True
+        return False
+    
+    def _extraer_numero_con_signo(self, entrada, i):
+        signo = entrada[i]
+        j = i + 1
+        while j < len(entrada) and self._es_digito(entrada[j]):
+            j += 1
+        return signo + entrada[i + 1:j], j
+    
+    def _extraer_numero(self, entrada, i):
+        j = i
+        while j < len(entrada) and self._es_digito(entrada[j]):
+            j += 1
+        return entrada[i:j], j
+    
+    def _extraer_identificador(self, entrada, i):
+        j = i
+        while j < len(entrada) and (self._es_alfanumerico(entrada[j]) or entrada[j] == '_'):
+            j += 1
+        return entrada[i:j], j
+
+
+class ClasificadorTokens:
+    """Clase responsable de clasificar tokens en categorías léxicas"""
+    
     def __init__(self):
         self.operadores_invalidos = ['**', '==', '!=', '<=', '>=']
         self.operadores_aritmeticos = ['+', '-', '*', '/']
@@ -44,91 +147,6 @@ class ValidadorExpresion:
     def es_parentesis(self, token):
         return token in self.parentesis
     
-    def tokenizar(self, entrada):
-        tokens = []
-        i = 0
-        
-        operadores_dobles = {
-            '**': '**', '==': '==', '!=': '!=', 
-            '<=': '<=', '>=': '>='
-        }
-        
-        while i < len(entrada):
-            if entrada[i] == ' ' or entrada[i] == '\t' or entrada[i] == '\n':
-                i += 1
-                continue
-            
-            # Verificar operadores dobles
-            if i + 1 < len(entrada):
-                doble = entrada[i:i+2]
-                if doble in operadores_dobles:
-                    tokens.append(doble)
-                    i += 2
-                    continue
-            
-            # Manejar números con signo
-            if self._es_numero_con_signo(entrada, i, tokens):
-                numero, nueva_i = self._extraer_numero_con_signo(entrada, i)
-                tokens.append(numero)
-                i = nueva_i
-                continue
-            
-            # Manejar números
-            if self._es_digito(entrada[i]):
-                numero, nueva_i = self._extraer_numero(entrada, i)
-                tokens.append(numero)
-                i = nueva_i
-                continue
-            
-            # Manejar identificadores
-            if self._es_letra(entrada[i]) or entrada[i] == '_':
-                identificador, nueva_i = self._extraer_identificador(entrada, i)
-                tokens.append(identificador)
-                i = nueva_i
-                continue
-            
-            # Operadores y paréntesis simples
-            if entrada[i] in "=()+-*/":
-                tokens.append(entrada[i])
-            else:
-                tokens.append(entrada[i])
-            
-            i += 1
-        
-        return tokens
-    
-    def _es_numero_con_signo(self, entrada, i, tokens):
-        if entrada[i] not in '+-':
-            return False
-        if i + 1 >= len(entrada) or not self._es_digito(entrada[i + 1]):
-            return False
-        
-        # Verificar contexto para determinar si es signo o operador
-        if i == 0:
-            return True
-        if entrada[i-1] in "=+-*/(" or (entrada[i-1] in ' \t\n' and tokens and tokens[-1] in "=+-*/("):
-            return True
-        return False
-    
-    def _extraer_numero_con_signo(self, entrada, i):
-        signo = entrada[i]
-        j = i + 1
-        while j < len(entrada) and self._es_digito(entrada[j]):
-            j += 1
-        return signo + entrada[i + 1:j], j
-    
-    def _extraer_numero(self, entrada, i):
-        j = i
-        while j < len(entrada) and self._es_digito(entrada[j]):
-            j += 1
-        return entrada[i:j], j
-    
-    def _extraer_identificador(self, entrada, i):
-        j = i
-        while j < len(entrada) and (self._es_alfanumerico(entrada[j]) or entrada[j] == '_'):
-            j += 1
-        return entrada[i:j], j
-    
     def clasificar_tokens(self, tokens):
         lexico = []
         
@@ -147,6 +165,21 @@ class ValidadorExpresion:
                 raise ValueError(f"Caracter inválido: {token}")
         
         return lexico
+
+
+class ValidadorSintactico:
+    """Clase responsable de las validaciones sintácticas"""
+    
+    def __init__(self):
+        self.operadores_aritmeticos = ['+', '-', '*', '/']
+        self.reglas_adyacencia = {
+            ('num', '('): "No puede ir un '(' después de un número.",
+            (')', 'num'): "No puede ir un número después de ')'.",
+            ('num', 'num'): "Se requiere un operador entre números.",
+            ('id', 'id'): "Se requiere un operador entre identificadores.",
+            ('id', 'num'): "Se requiere un operador entre identificador y número.",
+            ('num', 'id'): "Se requiere un operador entre número e identificador.",
+        }
     
     def validar_parentesis(self, tokens):
         nivel = 0
@@ -174,17 +207,6 @@ class ValidadorExpresion:
                 raise ValueError(mensaje)
     
     def validar_secuencias(self, lexico):
-        reglas_adyacencia = {
-            # (token_anterior, token_actual): mensaje_error
-            ('num', '('): "No puede ir un '(' después de un número.",
-            (')', 'num'): "No puede ir un número después de ')'.",
-            ('num', 'num'): "Se requiere un operador entre números.",
-            ('id', 'id'): "Se requiere un operador entre identificadores.",
-            ('id', 'num'): "Se requiere un operador entre identificador y número.",
-            ('num', 'id'): "Se requiere un operador entre número e identificador.",
-        }
-        
-        # Validar operadores consecutivos
         for i in range(1, len(lexico)):
             anterior, actual = lexico[i-1], lexico[i]
             
@@ -206,30 +228,39 @@ class ValidadorExpresion:
             
             # Verificar reglas de adyacencia
             clave = (anterior, actual)
-            if clave in reglas_adyacencia:
-                raise ValueError(reglas_adyacencia[clave])
+            if clave in self.reglas_adyacencia:
+                raise ValueError(self.reglas_adyacencia[clave])
     
     def validar_doble_negativo(self, tokens):
         for i in range(len(tokens) - 1):
             if tokens[i] == '-' and len(tokens[i + 1]) > 0 and tokens[i + 1][0] == '-':
                 raise ValueError("No se permite doble signo negativo.")
+
+
+class ValidadorExpresion:
+    """Clase principal que coordina el análisis léxico y sintáctico"""
+    
+    def __init__(self):
+        self.analizador_lexico = AnalizadorLexico()
+        self.clasificador = ClasificadorTokens()
+        self.validador_sintactico = ValidadorSintactico()
     
     def validar_expresion(self, entrada):
         try:
-            # Tokenizar
-            tokens = self.tokenizar(entrada)
+            # Análisis léxico
+            tokens = self.analizador_lexico.tokenizar(entrada)
             
-            # Clasificar tokens
-            lexico = self.clasificar_tokens(tokens)
+            # Clasificación de tokens
+            lexico = self.clasificador.clasificar_tokens(tokens)
             print("Tokens léxicos:", lexico)
             
-            # Validaciones
-            if not self.validar_parentesis(tokens):
+            # Validaciones sintácticas
+            if not self.validador_sintactico.validar_parentesis(tokens):
                 raise ValueError("Hay un error en la anidación de paréntesis.")
             
-            self.validar_estructura_basica(lexico)
-            self.validar_secuencias(lexico)
-            self.validar_doble_negativo(tokens)
+            self.validador_sintactico.validar_estructura_basica(lexico)
+            self.validador_sintactico.validar_secuencias(lexico)
+            self.validador_sintactico.validar_doble_negativo(tokens)
             
             # Si llegamos aquí, la expresión es válida
             print(' '.join(lexico))
@@ -240,6 +271,7 @@ class ValidadorExpresion:
             print(str(e))
             print("Vuelva a empezar")
             return False
+
 
 # Uso del validador
 if __name__ == "__main__":
